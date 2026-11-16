@@ -1,0 +1,40 @@
+site_name: WarpAlign
+site_description: Affine wavefront alignment and a local research workbench
+theme:
+  name: material
+  palette:
+    primary: teal
+    accent: teal
+  features:
+    - navigation.sections
+    - content.code.copy
+markdown_extensions:
+  - fenced_code
+  - tables
+nav:
+  - "Home": index.md
+  - "What is WarpAlign?": about.md
+  - "Architecture": architecture.md
+  - "How WFA works": wfa.md
+  - "CUDA architecture": cuda_architecture.md
+  - "Installation": installation.md
+  - "Quick start": quickstart.md
+  - "C++ API": cpp_api.md
+  - "Python API": python_api.md
+  - "CLI": cli.md
+  - "FASTA/FASTQ": input.md
+  - "Nanopore workflow": nanopore.md
+  - "PacBio HiFi": hifi.md
+  - "Minimap2 integration": minimap2.md
+  - "Studio": studio.md
+  - "Benchmarks": benchmarks.md
+  - "Accuracy and validation": validation.md
+  - "Memory management": memory.md
+  - "Exact and fast modes": exact_fast.md
+  - "Troubleshooting": troubleshooting.md
+  - "Contributing": contributing.md
+  - "Prior art": prior_art.md
+  - "Environment": environment.md
+  - "Limitations and roadmap": limitations.md
+
+  - Development report: development_report.md

@@ -1,0 +1,14 @@
+{
+  "build_command": "g++ -O3 -shared -std=c++17 -fPIC -Iinclude -I<python-include> -I<pybind11-include> python/bindings.cpp -o python/warpalign/_native<extension-suffix>",
+  "cuda_compiled": false,
+  "cpu_header_sha256": {
+    "include/warpalign/cigar.hpp": "40a1621cef0f60c63d3a84c9312564e080e54565c88b5b89a7c0eebb8e221f74",
+    "include/warpalign/cpu_backend.hpp": "9d5a80c363e2f0cd3e3c0cb3d12a0ebc98022d975a3fd1e1d64b5fe389eae5d0",
+    "include/warpalign/aligner.hpp": "af1dc98f33cd81df9dae690cd6eb6f9031802b88e895c907bb21cdcba0eb7e94",
+    "include/warpalign/warpalign.hpp": "cbc91d436c61813a6280733d0f4c7a51c29cf65cc007043a4c0101c171ce7003",
+    "include/warpalign/config.hpp": "cc0c70d6460cf136194746fd25e6071440a4750b69fb9d393067a0421a84e291",
+    "include/warpalign/sequence.hpp": "3f2c67ff3548e5d9fb502440403c876f8400502bf7d40e71e5700bdb7a5503bf",
+    "include/warpalign/wavefront.hpp": "5d10d74eada059f38eebe6bfce575fdb96af84ca5968e37f1bd23cc9a07142cf",
+    "include/warpalign/result.hpp": "742e5f99636a55c860e2e6e301cf9f1102120ef2f09c60a1ca8140696326e26c"
+  }
+}

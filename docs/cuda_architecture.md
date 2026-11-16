@@ -1,0 +1,11 @@
+# CUDA architecture — experimental, unvalidated
+
+The production Aligner currently executes CPU WFA. A CUDA request reports CPU fallback. The separately compiled `experimental::cuda_score` prototype is not automatically enabled by finding a GPU. It has no GPU traceback and is not a supported production CUDA backend.
+
+The prototype launches one 32-thread block (one full warp) per call. Lane l owns diagonal low + tile*32 + l. Each score iterates over 32-diagonal tiles; arbitrary widths use global scratch. Neighbor M predecessors for gap opening and I/D predecessors for extension are exchanged with `__shfl_up_sync` / `__shfl_down_sync`. Tile-boundary values come from global memory. A full mask is valid because every lane executes every exchange, including lanes past the final logical diagonal. Invalid logical lanes do not write scratch. All lanes reach `__syncwarp`, which orders global wavefront stores before the next score. `__any_sync` propagates completion. No cross-warp synchronization is assumed.
+
+A ring of max(mismatch, gap_open+gap_extend)+1 score levels stores three states. Width is limited by the explicit score budget and physical sequence boundaries; this is a safe bound because every gap base costs at least gap_extend. Failure to reach the end within the score budget raises a resource error, never an approximate result. The reusable arena checks free VRAM with 20% reserve and checks allocations, transfers, launch and synchronization. Only integer coordinates are stored on device.
+
+Current limitations: sequential host calls, no concurrent GPU batch scheduler, no GPU CIGAR generation, conservative full-width score rows, no automatic GPU-to-CPU orchestration for this experimental API. The public CPU path remains available. No CUDA compiler or GPU was available during initial development. Compile and run tests before claiming support. Run NVIDIA Compute Sanitizer on `test-cuda` as a release gate.
+
+[Primary reference: NVIDIA CUDA Programming Guide](https://docs.nvidia.com/cuda/cuda-programming-guide/), SIMT execution, warp intrinsics and memory ordering. A header-oriented CUDA API still requires NVCC-compatible compilation and the CUDA runtime; a CPU-only C++ consumer requires neither.
