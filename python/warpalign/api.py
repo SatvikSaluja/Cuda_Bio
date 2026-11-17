@@ -133,7 +133,7 @@ def run_job(job,directory,options):
         with process_lock:processes.pop(job,None)
         shutil.rmtree(directory,ignore_errors=True)
 
-def submit(options,queries,targets):
+def submit(options,queries,targets,*,demo=False):
     try:Aligner(**{k:v for k,v in options.model_dump().items() if k not in ('kind','preset','batch_size','pairing','job_timeout')})
     except ValueError as error:raise HTTPException(422,str(error))
     if options.backend=='cuda' and not options.allow_fallback and not capabilities()['cuda']:
@@ -143,7 +143,7 @@ def submit(options,queries,targets):
     job=uuid.uuid4().hex
     with process_lock:
         if benchmark_lock.locked():raise HTTPException(409,'Wait for the measurement to finish before submitting an alignment')
-        try:store().create(job,options.model_dump())
+        try:store().create(job,{**options.model_dump(),'demo':demo})
         except ValueError as error:raise HTTPException(429,str(error))
     directory=tempfile.mkdtemp(prefix='warpalign-',dir=DATA)
     try:
@@ -167,7 +167,18 @@ async def create_job(request: Request):
 
 @app.post('/api/demo',status_code=202)
 def demo():
-    return submit(Options(),b'>demo-match\nACGTACGT\n>demo-indel\nACGTAAAACGT\n>demo-mismatch\nAACCGGTT\n',b'>target-match\nACGTACGT\n>target-indel\nACGTACGT\n>target-mismatch\nAATCGGTT\n')
+    import random
+    rng=random.Random(1729)
+    target=''.join(rng.choice('ACGT') for _ in range(1200))
+    # Controlled substitutions plus a 9 bp insertion and a 6 bp deletion.
+    changed=list(target)
+    for position in (60,170,650,950):changed[position]='ACGT'[('ACGT'.index(changed[position])+1)%4]
+    mutated=''.join(changed)
+    indel=mutated[:100]+'GATTACAGG'+mutated[100:400]+mutated[406:]
+    queries=f'>demo-match\n{target}\n>demo-indel\n{indel}\n>demo-mismatch\n{mutated}\n'.encode()
+    targets=''.join(f'>target-{name}\n{target}\n' for name in ('match','indel','mismatch')).encode()
+    return submit(Options(backend='cpu'),queries,targets,demo=True)
+
 
 @app.get('/api/jobs')
 def list_jobs():return store().jobs()
@@ -242,11 +253,12 @@ def main():
     import uvicorn
     parser=argparse.ArgumentParser(description='Local WarpAlign Studio')
     parser.add_argument('--port',type=int,default=8000)
+    parser.add_argument('--host',choices=['127.0.0.1','0.0.0.0'],default='127.0.0.1',help='Use 0.0.0.0 inside a locally published container')
     args=parser.parse_args()
     if not 1<=args.port<=65535:parser.error('port must be in 1..65535')
     if not (web/'index.html').is_file():
         print('Studio bundle missing. Run npm ci && npm run build in apps/studio or set WARPALIGN_STUDIO_DIST.',file=sys.stderr)
     print(f'Open http://localhost:{args.port} · local data: {DATA}',flush=True)
-    uvicorn.run('warpalign.api:app',host='127.0.0.1',port=args.port)
+    uvicorn.run('warpalign.api:app',host=args.host,port=args.port)
 
 if __name__=='__main__':main()

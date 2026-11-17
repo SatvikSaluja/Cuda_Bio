@@ -114,3 +114,18 @@ def test_old_cuda_extension_rejected(monkeypatch):
     monkeypatch.setenv('WARPALIGN_EXPERIMENTAL_CUDA','1')
     with pytest.raises(ResourceError,match='Rebuild'):
         Aligner(backend='cuda',allow_fallback=False).align('A','A')
+
+@pytest.mark.parametrize('backend',['cuda','auto'])
+def test_gpu_resource_failure_obeys_fallback_policy(monkeypatch,backend):
+    """Routing contract only, not a GPU execution test."""
+    import types
+    import warpalign
+    def exhaust(*args):raise RuntimeError('CUDA traceback history exceeds memory budget')
+    fake=types.SimpleNamespace(api_version=2,available=lambda:True,alignments=exhaust)
+    monkeypatch.setattr(warpalign,'_cuda',fake,raising=False)
+    monkeypatch.setenv('WARPALIGN_EXPERIMENTAL_CUDA','1')
+    with pytest.raises(ResourceError,match='memory budget'):
+        Aligner(backend=backend,allow_fallback=False).align('ACGT','ACGTT')
+    result=Aligner(backend=backend,allow_fallback=True).align('ACGT','ACGTT')
+    assert result.backend=='cpu' and result.cpu_fallback and result.score==8
+    assert 'memory budget' in result.fallback_reason

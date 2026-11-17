@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import os
 import time
 from ._native import Config, Result, ResourceError, Aligner as _Aligner
-__version__ = "0.2.0"
+__version__ = "1.0.0"
 FIELDS = "query_id target_id score edit_distance cigar query_start query_end target_start target_end matches mismatches insertions deletions backend execution_time heuristic_used cpu_fallback fallback_reason has_traceback bandwidth heuristic_retries wavefront_bytes gpu_memory_bytes timing_scope".split()
 
 class Aligner:
@@ -26,6 +26,7 @@ class Aligner:
         return _Aligner(config)
 
     def _cuda_results(self,queries,targets):
+        self._cuda_attempted=False
         if self.options['backend']=='cpu':return None
         try:
             if os.environ.get('WARPALIGN_EXPERIMENTAL_CUDA')!='1':
@@ -34,6 +35,7 @@ class Aligner:
             if getattr(_cuda,'api_version',0)!=2:raise RuntimeError('Rebuild the CUDA extension for this WarpAlign version')
             if not _cuda.available():raise RuntimeError('No compatible CUDA device')
             if self.options['mode']!='exact':raise RuntimeError('CUDA supports exact alignment only')
+            self._cuda_attempted=True
             start=time.perf_counter()
             o=self.options
             args=(queries,targets,o['mismatch'],o['gap_open'],o['gap_extend'],o['ambiguous'],o['memory_limit'],self.cuda_max_score)
@@ -52,7 +54,7 @@ class Aligner:
                 r.execution_time=elapsed/max(1,len(results));r.timing_scope="amortized_batch_wall";r.gpu_memory_bytes=_cuda.last_arena_bytes()
             return results
         except (ImportError,RuntimeError) as error:
-            if self.options['backend']=='cuda' and not self.options['allow_fallback']:
+            if (self.options['backend']=='cuda' or self._cuda_attempted) and not self.options['allow_fallback']:
                 raise ResourceError(str(error)) from error
             self._fallback_reason=str(error)
             return None
@@ -73,8 +75,9 @@ class Aligner:
             worker=self._native({**self.options,'memory_limit':self.options['memory_limit']//workers})
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 results=list(pool.map(lambda pair:worker.align(*pair),zip(queries,targets)))
-        if self.options['backend']=='cuda':
-            for r in results:r.fallback_reason=getattr(self,'_fallback_reason',r.fallback_reason)
+        if self.options['backend']=='cuda' or getattr(self,'_cuda_attempted',False):
+            for r in results:
+                r.cpu_fallback=True;r.fallback_reason=getattr(self,'_fallback_reason',r.fallback_reason)
         return results
 
 def as_dict(result: Result) -> dict:

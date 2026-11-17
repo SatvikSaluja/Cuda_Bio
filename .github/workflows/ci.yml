@@ -29,6 +29,7 @@ jobs:
           cache: npm
           cache-dependency-path: apps/studio/package-lock.json
       - run: cd apps/studio && npm ci && npm run build && npm test
+      - run: python scripts/check_version.py
       - run: python -m pip install build twine
       - run: python -m build && python -m twine check dist/*
       - run: python -m pip install "$(echo dist/*.whl)[studio,test,docs]"
@@ -59,3 +60,14 @@ jobs:
           trap 'kill "$server" || true' EXIT
           for attempt in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/api/status && break || sleep 1; done
           node tests/e2e/studio.mjs
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t warpalign:test .
+      - name: Run packaged demo through container networking
+        run: |
+          docker run -d --name warpalign-demo -p 127.0.0.1:8000:8000 warpalign:test
+          trap 'docker logs warpalign-demo; docker rm -f warpalign-demo' EXIT
+          for attempt in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/api/status && break || sleep 1; done
+          python tests/e2e/docker_smoke.py

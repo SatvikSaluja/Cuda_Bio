@@ -24,3 +24,27 @@ By default the service stores SQLite data under `~/.local/share/warpalign`. Set 
 On restart, unfinished jobs become `interrupted`. Only one POSIX service may own a data directory. Jobs are not automatically resumed. The upload limit is 32 MiB and at most four alignment jobs may be queued/running. Benchmarks are serialized and reject requests while alignment jobs are active.
 
 The unauthenticated service binds loopback and checks Host/Origin. It is not intended for public hosting. Browser E2E tests are provided in `tests/e2e/studio.mjs`; they require a real running local API and Playwright.
+
+## Judge demo and screenshot
+
+`docker compose up --build` builds and starts the CPU image at
+http://localhost:8000 with persistent local results. The image has no GPU runtime
+requirement. Docker execution is pending on a machine with Docker installed.
+The service supports `--host 0.0.0.0` inside the container; Compose limits published
+access to localhost. Host/origin checks still reject remote domains.
+
+**Try a real demo** uses seeded synthetic 1.2 kb DNA, including substitutions and
+explicit insertion/deletion events. After real alignment and three measured CPU
+benchmark configurations complete, the UI opens the variant canvas and charts.
+All measurements are stored with their demo job identifier.
+
+To capture the actual UI (after installing browser prerequisites), start Studio
+and run:
+
+```sh
+WARPALIGN_SCREENSHOT_DIR=docs/assets node tests/e2e/studio.mjs
+```
+
+This creates `docs/assets/studio-demo.png`. Uncomment its image in the README
+after verifying the screenshot. The placeholder is intentionally not rendered
+until a real screenshot exists.

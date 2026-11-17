@@ -4,7 +4,7 @@
 
 Long reads expose a practical problem: dense alignment matrices grow with both sequence lengths. Wavefront alignment instead advances through increasing edit costs, making similar long sequences tractable.
 
-WarpAlign combines a C++17 affine WFA engine with Python, a streaming CLI and a private local workbench. **Version 0.2.0 is a CPU research release with experimental, unvalidated CUDA batch scoring and device traceback.** It is not clinically validated and has no established GPU speedup.
+WarpAlign combines a C++17 affine WFA engine with Python, a streaming CLI and a private local workbench. **Version 1.0.0 is a CPU research release with experimental, unvalidated CUDA batch scoring and device traceback.** It is not clinically validated and has no established GPU speedup.
 
 [Install WarpAlign](installation.md) · [Run your first alignment](quickstart.md) · [Inspect measured benchmarks](benchmarks.md)
 

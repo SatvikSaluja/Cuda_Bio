@@ -39,4 +39,5 @@ nav:
 
   - Workflow examples: workflows.md
   - Development report: development_report.md
+  - Release guide: releasing.md
 repo_url: https://github.com/SatvikSaluja/Cuda_Bio

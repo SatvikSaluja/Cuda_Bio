@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 nvidia-smi
 nvcc --version
-cmake -S . -B build-cuda -DWARPALIGN_CUDA=ON -DWARPALIGN_CUDA_PYTHON=ON -DCMAKE_CUDA_ARCHITECTURES=native -DPython_EXECUTABLE="$(command -v python)"
+cmake -S . -B build-cuda -DENABLE_CUDA=ON -DWARPALIGN_CUDA_PYTHON=ON -DCMAKE_CUDA_ARCHITECTURES=native -DPython_EXECUTABLE="$(command -v python)"
 cmake --build build-cuda -j2
 ./build-cuda/test-cuda
 compute-sanitizer --tool memcheck --error-exitcode 1 ./build-cuda/test-cuda

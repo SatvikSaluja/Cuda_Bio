@@ -1,6 +1,6 @@
 # Limits and remaining validation
 
-Version 0.2.0 is a functional CPU research release with optional **experimental CUDA batch scoring and traceback**. It is not a finished GPU alignment library or a demonstrated improvement over external WFA implementations.
+Version 1.0.0 is a functional CPU research release with optional **experimental CUDA batch scoring and traceback**. It is not a finished GPU alignment library or a demonstrated improvement over external WFA implementations.
 
 ## Implemented improvements
 

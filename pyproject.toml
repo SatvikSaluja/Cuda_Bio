@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "warpalign"
-version = "0.2.0"
+version = "1.0.0"
 description = "Resource-bounded affine wavefront alignment and local analysis studio"
 readme = "README.md"
 requires-python = ">=3.10"

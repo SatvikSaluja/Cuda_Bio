@@ -60,7 +60,11 @@ def test_detail_demo_and_cancel():
         assert searched['filtered_total']==1
         index=searched['results'][0]['result_index']
         detail=(await client.get(f'/api/jobs/{jid}/results/{index}')).json()
-        assert detail['query_sequence']=='ACGTAAAACGT'
+        assert len(detail['query_sequence'])==1203
+        assert detail['mismatches']>0 and detail['insertions']>0 and detail['deletions']>0
+        measured=(await client.get('/api/benchmarks')).json()
+        rows=[r for r in measured if r.get('demo_job')==jid]
+        assert len(rows)==3 and all(r['seconds']>0 and r['score_agreement']==1 for r in rows)
         assert (await client.get(f'/api/jobs/{jid}/download?format=paf')).status_code==200
         assert (await client.post(f'/api/jobs/{jid}/cancel')).json()['status']=='complete'
         # Cancel a genuinely submitted large job. Both queued and running are valid states.

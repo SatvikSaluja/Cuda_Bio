@@ -7,7 +7,7 @@ python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -e '.[studio,test,docs]' build twine
 (cd apps/studio && npm ci && npm run build && npm test)
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DENABLE_CUDA=OFF -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j2
 ctest --test-dir build --output-on-failure
 python -m pytest -q
@@ -35,3 +35,15 @@ bash scripts/validate_cuda.sh
 The script uses a CMake version supporting `CMAKE_CUDA_ARCHITECTURES=native`; use an explicit architecture if needed. It copies the compiled optional extension into the editable Python package. Installed non-editable packages require installing/copying the extension into their own package directory. Compilation does not imply runtime correctness. See the CUDA architecture page and Colab notebook.
 
 Offline packagers can set `PYBIND11_INCLUDE_DIR` to an existing SDK's include directory and build without build isolation, using installed setuptools/wheel. This is an explicit packaging option, not a runtime PyTorch dependency.
+
+## CPU demo container
+
+From the checkout, `docker compose up --build` builds the native package and
+bundled frontend, then serves http://localhost:8000. Results live in a named
+volume. The runtime is non-root and Compose publishes only to localhost.
+Docker is not available in the development sandbox; the added CI smoke test
+must pass before treating the container as runtime-validated.
+
+CMake also accepts `-DENABLE_CUDA=AUTO` for compiler detection without a CUDA
+requirement. `ON` requires NVCC; `OFF` excludes CUDA targets and headers from
+CPU consumers. An explicit/cached `ENABLE_CUDA` overrides the legacy default.

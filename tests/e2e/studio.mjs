@@ -2,6 +2,8 @@
 // WARPALIGN_BASE_URL defaults to the loopback Studio server.
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
 const browser=await chromium.launch({headless:true});
 try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
@@ -9,9 +11,14 @@ try{
  await page.goto(process.env.WARPALIGN_BASE_URL||'http://127.0.0.1:8000');
  await page.getByText('Local engine connected',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Try a real demo'}).click();
- await page.getByText('3 pairs processed',{exact:true}).waitFor({timeout:30000});
- await page.getByRole('button',{name:'demo-indel',exact:true}).click();
+ await page.getByRole('heading',{name:'Measured demo performance'}).waitFor({timeout:30000});
  await page.getByRole('heading',{name:'demo-indel → target-indel'}).waitFor();
+ await page.getByRole('img',{name:'Demo latency',exact:true}).waitFor();
+ assert.equal(await page.getByRole('img',{name:'Demo latency',exact:true}).locator('circle').count(),3);
+ if(process.env.WARPALIGN_SCREENSHOT_DIR){
+  await mkdir(process.env.WARPALIGN_SCREENSHOT_DIR,{recursive:true});
+  await page.screenshot({path:join(process.env.WARPALIGN_SCREENSHOT_DIR,'studio-demo.png'),fullPage:true});
+ }
  await page.getByRole('button',{name:'Next difference →'}).click();
  await page.getByLabel('Column',{exact:true}).fill('2');
  await page.getByRole('button',{name:'Settings',exact:true}).click();

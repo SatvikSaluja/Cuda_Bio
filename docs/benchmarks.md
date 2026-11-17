@@ -21,3 +21,14 @@ The checkpoint comparison holds generated inputs/scoring constant. It reduces re
 `benchmarks/scripts/compare_external.py` runs a separately installed protocol adapter on identical pairs. It checks known score conventions and every resulting score before recording timings. Adapter engine time and subprocess wall time remain separate. `benchmarks/adapters/wfa2.c` explicitly disables default heuristics and sets end-to-end alignment, following the [WFA2 configuration documentation](https://github.com/Marco-Sola-Lab/WFA2-lib#15-important-notes-and-clarifications). It provides a source-reviewed adapter for WFA2 high/ultralow modes; it has not compiled or run here. WFA-GPU/GASAL2 adapters and comparative results remain outstanding.
 
 For GPU benchmarking, first pass device validation, then request `--backend cuda --no-fallback` with experimental opt-in. Full CUDA timings include two device scoring passes, device traceback, transfers and linear host replay. GPU arena bytes are distinct from total VRAM; CUDA-event kernel/transfer timing is not yet instrumented. Compare full mapping pipelines separately from pairwise alignment.
+
+## Judge-ready full/checkpoint comparison
+
+Run `python benchmarks/scripts/judge_report.py` to reproduce the README table.
+The script runs 12 isolated configurations at 1, 10 and 100 kb, substitution
+probabilities 0.1% and 1%, and a fixed 0.2% indel-event probability. It compares
+full history with checkpoint interval 128 using identical seeded inputs and
+three measured repeats. Raw JSON/CSV and Markdown are saved under
+`benchmarks/results/judge-v020/`. Measurements include process peak RSS and
+engine-accounted wavefront bytes separately. Checkpoint savings cost additional
+recomputation time; small inputs may show no useful savings.

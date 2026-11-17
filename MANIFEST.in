@@ -7,3 +7,4 @@ recursive-include examples *.cpp
 recursive-include tests *.py *.cpp *.cu *.fa
 recursive-include python/warpalign/licenses *.txt
 include THIRD_PARTY_NOTICES.md
+include RELEASE_NOTES.md CHANGELOG.md

@@ -21,7 +21,7 @@ Updated 2026-11-17. Work is left uncommitted. This report describes implemented 
 
 - CMake/CTest CPU build: 1/1 CTest target passing.
 - Independent oracle: 4,000 randomized and 1,922 exhaustive short-pair comparisons; CIGAR replay/rescoring, full/checkpoint/score-only agreement and low-divergence lengths through 100 kb.
-- Python/API suite: 26 passed, 2 skipped (CUDA extension/device and actual minimap2 unavailable). Includes real worker subprocesses, durable search/detail/export, cancellation, deadlines, indexed refinement and memory-budget tests.
+- Python/API suite: 28 passed, 2 skipped (CUDA extension/device and actual minimap2 unavailable). Includes real worker subprocesses, durable search/detail/export, cancellation, deadlines, indexed refinement and memory-budget tests.
 - CPU AddressSanitizer/UndefinedBehaviorSanitizer run passed with leak detection disabled for sandbox compatibility.
 - Frontend TypeScript/Vite build and five CIGAR-index tests passed.
 - Clean isolated frontend `npm ci --offline` from cached registry packages, followed by build/tests, passed with a portable integrity lockfile. The final expanded source also builds with the installed dependencies.
@@ -79,3 +79,50 @@ python scripts/validate_release.py --checks external --wfa2-root /path/to/WFA2-l
 
 The external runner compiles the adapter and measures both high-memory WFA2
 and ultralow-memory BiWFA using a recorded clean source revision.
+
+## Hackathon-readiness audit
+
+- Added OFF/ON/AUTO CUDA configuration; clean CPU OFF and missing-NVCC AUTO
+  builds pass CTest independently. Python remains a CPU-only extension build.
+- Reviewed CUDA scratch offsets: descriptors and sequence buffers preserve
+  integer alignment; full history and operation buffers check capacities;
+  scoring and traceback launches check launch errors and synchronize before
+  reading outputs. This source audit cannot replace NVCC or device sanitizers.
+- Fixed auto-backend resource fallback reporting and strict no-fallback behavior;
+  routing tests cover both auto/cuda requests without claiming GPU execution.
+- Added a multi-stage Docker image, localhost-only Compose publication, non-root
+  runtime, persistent volume, health check and CI container smoke test. Docker
+  is unavailable locally, so container compilation/runtime remain unverified.
+- Replaced the tiny demo with deterministic 1.2 kb synthetic variants and real
+  worker measurements. API tests validate all three variant classes and three
+  benchmark records. The UI automatically opens the viewer and measured charts.
+- Rewrote README around the demo, architecture, real comparison table and explicit
+  validation status. Screenshot capture is supported by the live browser test.
+- New raw CPU data: `benchmarks/results/judge-v020/`, 12 configurations across
+  1/10/100 kb, two substitution rates, full/checkpoint storage, three repeats.
+  At 100 kb / 1% substitutions plus 0.2% indels: peak RSS 119.56 vs 32.39 MiB,
+  median full/checkpoint latency 362.20 vs 646.41 ms. RSS includes the entire
+  isolated process, not just wavefront storage. No external/GPU speedup claim.
+
+Latest local results: 28 Python tests passed, 2 hardware/external tests skipped;
+C++ OFF and AUTO configurations pass; TypeScript/Vite and all five viewer tests
+pass. MkDocs, Docker, CUDA compilation/runtime and live browser verification
+remain unavailable here. Run the supplied workflows on equipped machines.
+
+## Version 1.0.0 preparation
+
+Version metadata, release notes, localhost-first README and a how-it-works
+flowchart are prepared. The tag workflow creates a draft release only after
+the user commits and pushes a version tag; no tag or release has been created
+locally. Existing benchmark files keep their original 0.2.0 provenance.
+
+The v1 CPU build passes CTest; TypeScript/Vite and five viewer tests pass.
+Python/API tests: **29 passed, 1 skipped**. Minimap2 2.26-r1175 is now installed,
+and its actual forward/reverse synthetic-read integration test passed. The
+remaining skip is CUDA. This updates the historical mapper-absence observations
+above; real sequencing workloads and external pairwise benchmarks remain pending.
+
+A local CPython 3.12 Linux wheel and source distribution are prepared under
+`dist/1.0.0/` with SHA256 checksums. Local packaging uses installed setuptools
+and SDK headers because the isolated build/twine tooling is unavailable; the
+release workflow runs the standard build/twine checks on its equipped runner.
