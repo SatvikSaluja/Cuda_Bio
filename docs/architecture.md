@@ -1,17 +1,25 @@
-# Architecture decisions
+# Architecture
 
-```mermaid
-flowchart TD
-  Browser[React Studio] --> API[Loopback FastAPI]
-  API --> Python[pybind11 package]
-  CLI[Streaming Python CLI] --> Python
-  CPP[C++ consumers] --> Core[Header-oriented CPU WFA]
-  Python --> Core
-  Mapper[minimap2 executable] --> Refinement[Candidate refinement adapter]
-  Refinement --> Python
-  Prototype[Experimental CUDA score API] --> Device[One full warp with tiled diagonals]
+```text
+React Studio → loopback FastAPI → SQLite job/result store
+                         ↓
+                cancellable worker process
+                         ↓
+                   Python Aligner
+                 /                \
+          pybind11 CPU       optional CUDA module
+               ↓                   ↓
+       indexed affine WFA     batched warp scoring
+               ↓                   ↓
+      full/checkpoint trace   CPU trace for full results
+
+minimap2 → candidate PAF → disk-backed sequence slices → Aligner
 ```
 
-The engine is header-oriented to simplify C++ embedding. Pybind11 is a thin bridge with GIL release; parsing, subprocess orchestration and HTTP lifecycle remain in Python. The CLI intentionally depends on Python while standalone C++ consumers do not. Studio is a static React/TypeScript bundle served by the local API, with no cloud service. SVG charts avoid another plotting dependency and use only recorded values.
+The CPU C++ API is header-oriented and dependency-free. CPU hot paths use indexed score history and normalized penalties. Pybind11 releases the GIL; Python batch threads share the configured wavefront budget.
 
-CUDA code is a separate experimental target until compilation, runtime correctness, traceback and dispatch integration are validated. This separation prevents an untested kernel from being advertised as production support.
+Studio keeps sequence/result records in local SQLite and uses separate processes for cancellable jobs. Paginated metadata excludes sequences; the viewer fetches an individual detail payload on demand. Downloads stream rows. A single POSIX service owns a data directory; interrupted jobs are marked on restart.
+
+The CUDA API remains experimental. Independent warp blocks consume per-alignment slices in a reusable arena. Python opt-in distinguishes `cuda` execution and explicit CPU fallback. Full device traceback retains bounded history, reconstructs operations on-device, and validates/encodes them on the host. The ordinary C++ Aligner remains CPU-only; its experimental CUDA functions are separately callable.
+
+The release build copies the compiled React bundle into the wheel. Static documentation remains separate from the local application. No external service or telemetry is needed for ordinary use.

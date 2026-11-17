@@ -1,9 +1,10 @@
 cff-version: 1.2.0
 message: "If using this software, cite the exact version and also cite the original WFA methods and any external mapper."
 title: "WarpAlign: affine wavefront alignment and local inspection"
-version: 0.1.0
-date-released: 2026-11-16
+version: 0.2.0
+date-released: 2026-11-17
 type: software
 license: MIT
 authors:
   - name: "WarpAlign contributors"
+repository-code: "https://github.com/SatvikSaluja/Cuda_Bio"

@@ -1,0 +1,47 @@
+name: External reference validation (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      wfa2_ref:
+        description: WFA2 revision or tag to evaluate (resolved commit recorded)
+        default: main
+        required: true
+      minimap2_ref:
+        description: Minimap2 revision or tag (resolved commit recorded)
+        default: master
+        required: true
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install '.[test]'
+      - name: Build external projects and record exact revisions
+        env:
+          WFA2_REF: ${{ inputs.wfa2_ref }}
+          MINIMAP2_REF: ${{ inputs.minimap2_ref }}
+        run: |
+          git clone https://github.com/Marco-Sola-Lab/WFA2-lib.git "$RUNNER_TEMP/WFA2"
+          git -C "$RUNNER_TEMP/WFA2" checkout --detach "$WFA2_REF"
+          make -C "$RUNNER_TEMP/WFA2" -j2
+          git clone https://github.com/lh3/minimap2.git "$RUNNER_TEMP/minimap2"
+          git -C "$RUNNER_TEMP/minimap2" checkout --detach "$MINIMAP2_REF"
+          make -C "$RUNNER_TEMP/minimap2" -j2
+          echo "$RUNNER_TEMP/minimap2" >> "$GITHUB_PATH"
+          mkdir -p benchmarks/results/external-ci
+          git -C "$RUNNER_TEMP/WFA2" rev-parse HEAD > benchmarks/results/external-ci/wfa2-revision.txt
+          git -C "$RUNNER_TEMP/minimap2" rev-parse HEAD > benchmarks/results/external-ci/minimap2-revision.txt
+      - name: Compile and compare WFA2 adapter
+        run: |
+          cc -O3 -fopenmp -I"$RUNNER_TEMP/WFA2" benchmarks/adapters/wfa2.c -L"$RUNNER_TEMP/WFA2/lib" -Wl,-rpath,"$RUNNER_TEMP/WFA2/lib" -lwfa -lm -o "$RUNNER_TEMP/wfa2-adapter"
+          python benchmarks/scripts/compare_external.py --baseline-version "$(cat benchmarks/results/external-ci/wfa2-revision.txt)" --output benchmarks/results/external-ci/wfa2.json "$RUNNER_TEMP/wfa2-adapter" ultralow
+      - run: python -m pytest tests/integration/test_minimap2_external.py -q
+      - uses: actions/upload-artifact@v4
+        with:
+          name: external-validation
+          path: benchmarks/results/external-ci/

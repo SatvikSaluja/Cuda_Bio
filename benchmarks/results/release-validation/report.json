@@ -1,0 +1,28 @@
+{
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "command": [
+    "scripts/validate_release.py"
+  ],
+  "records": [
+    {
+      "check": "cuda",
+      "status": "blocked",
+      "reason": "Missing commands: nvcc, nvidia-smi, compute-sanitizer, cmake"
+    },
+    {
+      "check": "docs",
+      "status": "blocked",
+      "reason": "Install the docs extra: python -m pip install -e .[docs]"
+    },
+    {
+      "check": "external",
+      "status": "blocked",
+      "reason": "Supply --wfa2-root pointing to a built WFA2-lib checkout"
+    },
+    {
+      "check": "browser",
+      "status": "blocked",
+      "reason": "Install tests/e2e dependencies and Chromium; see tests/e2e/README.md"
+    }
+  ]
+}

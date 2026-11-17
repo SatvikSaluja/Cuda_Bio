@@ -37,4 +37,6 @@ nav:
   - "Environment": environment.md
   - "Limitations and roadmap": limitations.md
 
+  - Workflow examples: workflows.md
   - Development report: development_report.md
+repo_url: https://github.com/SatvikSaluja/Cuda_Bio

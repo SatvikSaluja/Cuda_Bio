@@ -3,13 +3,24 @@
 Build the frontend and start the loopback API:
 
 ```sh
-cd apps/studio && npm install && npm run build
-cd ../..
-warpalign-studio
+(cd apps/studio && npm ci && npm run build)
+warpalign-studio --port 8000
 ```
 
-Open http://127.0.0.1:8000. Development alternative: start `npm run dev` in `apps/studio` alongside the API. Vite proxies `/api` locally.
+Open http://localhost:8000. A release wheel built after the frontend includes its assets and can serve Studio outside the repository. `WARPALIGN_STUDIO_DIST` overrides the bundle location. Startup prints a missing-bundle diagnostic when necessary.
 
-Dashboard shows actual service status and session runs. New alignment uploads local input files. Results shows progress and paginates 200 rows, with search and sorting within that page. Download exports the completed run, including sequences. Viewer paints only the visible CIGAR-indexed columns onto canvas. Performance lab times real seeded CPU calls; unavailable GPU charts remain empty. Settings stores defaults in browser localStorage and clears completed server runs.
+## Workspace
 
-The service rejects non-local Host/Origin values, bounds uploads and queued jobs, binds 127.0.0.1, and deletes temporary uploads after each job. No sequence telemetry or cloud upload is implemented. Session results are in memory, not durable storage. Use the CLI for large jobs; do not expose this unauthenticated local service on a public interface.
+The overview reports actual backend connectivity and persistent history. **Try a real demo** submits synthetic sequences to the same worker used for uploads. New alignment supports drag-and-drop FASTA/FASTQ, input-order or identifier pairing, scoring, CPU threads, memory budget, timeouts, checkpointed traceback and heuristic retries.
+
+Results search and sorting operate over the entire SQLite dataset, then paginate. Sequence payloads are fetched only when an alignment is opened. Completed results stream as JSONL or PAF. Jobs run in separate processes; cancellation terminates the process group, including a mapper subprocess on POSIX. Job deadlines enforce a wall-clock bound independently of CPU alignment deadlines.
+
+The viewer indexes CIGAR runs, renders only visible bases, provides column/variant navigation and zoom, and includes an accessible text view. Dark/light appearance and alignment defaults are browser-local preferences.
+
+## Persistence and cleanup
+
+By default the service stores SQLite data under `~/.local/share/warpalign`. Set `WARPALIGN_DATA_DIR` to choose another directory. Results contain genomic sequences in plaintext on local disk. Clearing finished jobs removes their logical database rows; it is not a secure disk-erasure guarantee. Temporary job directories are removed after normal completion, failure or cancellation. A hard system crash can leave temporary directories for manual cleanup.
+
+On restart, unfinished jobs become `interrupted`. Only one POSIX service may own a data directory. Jobs are not automatically resumed. The upload limit is 32 MiB and at most four alignment jobs may be queued/running. Benchmarks are serialized and reject requests while alignment jobs are active.
+
+The unauthenticated service binds loopback and checks Host/Origin. It is not intended for public hosting. Browser E2E tests are provided in `tests/e2e/studio.mjs`; they require a real running local API and Playwright.

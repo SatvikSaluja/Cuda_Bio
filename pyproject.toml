@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "warpalign"
-version = "0.1.0"
+version = "0.2.0"
 description = "Resource-bounded affine wavefront alignment and local analysis studio"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ license = {text = "MIT"}
 authors = [{name = "WarpAlign contributors"}]
 
 [project.optional-dependencies]
-studio = ["fastapi>=0.110", "uvicorn>=0.27", "python-multipart>=0.0.9"]
+studio = ["fastapi>=0.110", "uvicorn>=0.27", "python-multipart>=0.0.9", "pydantic>=2.6"]
 test = ["pytest>=8", "httpx>=0.27"]
 docs = ["mkdocs-material>=9.5"]
 
@@ -23,9 +23,14 @@ warpalign-studio = "warpalign.api:main"
 [tool.setuptools]
 package-dir = {"" = "python"}
 packages = ["warpalign"]
+include-package-data = false
 
 [tool.setuptools.package-data]
-warpalign = ["py.typed", "*.pyi"]
+warpalign = ["py.typed", "*.pyi", "_studio/**/*", "_studio/*", "licenses/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[project.urls]
+Repository = "https://github.com/SatvikSaluja/Cuda_Bio"
+Issues = "https://github.com/SatvikSaluja/Cuda_Bio/issues"

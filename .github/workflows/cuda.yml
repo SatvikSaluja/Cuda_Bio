@@ -1,11 +1,17 @@
 name: CUDA device validation (manual hardware runner)
 on: workflow_dispatch
+permissions:
+  contents: read
 jobs:
   gpu:
     runs-on: [self-hosted, linux, x64, cuda]
     steps:
       - uses: actions/checkout@v4
-      - run: nvidia-smi && nvcc --version
-      - run: cmake -S . -B build-cuda -DWARPALIGN_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native && cmake --build build-cuda -j2
-      - run: ./build-cuda/test-cuda
-      - run: compute-sanitizer --error-exitcode 1 ./build-cuda/test-cuda
+      - run: python -m pip install -e '.[test]' pybind11 cmake
+      - run: bash scripts/validate_cuda.sh
+      - name: Record measured GPU execution
+        run: WARPALIGN_EXPERIMENTAL_CUDA=1 python benchmarks/scripts/run.py --backend cuda --no-fallback --lengths 100,1000,10000 --batches 1,16 --output benchmarks/results/gpu-ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gpu-measurements
+          path: benchmarks/results/gpu-ci/

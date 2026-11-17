@@ -12,4 +12,4 @@ warpalign align-pairs --queries tests/fixtures/queries.fa --targets tests/fixtur
 warpalign-studio
 ```
 
-Build Studio first (`cd apps/studio && npm install && npm run build`). Open http://127.0.0.1:8000. Upload the fixture files in New alignment, wait for the real job to complete, select a result, then inspect its CIGAR. Performance lab creates seeded synthetic inputs and times the installed engine.
+Build Studio first (`cd apps/studio && npm ci && npm run build`). Open http://127.0.0.1:8000. Upload the fixture files in New alignment, wait for the real job to complete, select a result, then inspect its CIGAR. Performance lab creates seeded synthetic inputs and times the installed engine.

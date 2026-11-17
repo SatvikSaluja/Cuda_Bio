@@ -19,6 +19,7 @@ public:
   if(ptr_) {auto status=cudaFree(ptr_);if(status!=cudaSuccess){cudaFree(replacement);cuda_check(status);}}
   ptr_=replacement;capacity_=bytes;return ptr_;
  }
+ void limit(std::size_t bytes) {if(capacity_>bytes){cuda_check(cudaFree(ptr_));ptr_=nullptr;capacity_=0;}}
  std::size_t capacity()const{return capacity_;}
 };
 }

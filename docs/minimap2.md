@@ -1,7 +1,9 @@
-# Minimap2 integration
+# Minimap2 refinement
 
-The mapper adapter is `python/warpalign/mapping.py`. It executes minimap2 with an argv list (no shell), requests `-c -x PRESET` PAF, spools output to a local temporary file and checks the exit status. Candidate intervals use original forward-strand query coordinates. Negative-strand query slices are reverse-complemented before alignment against forward target slices.
+`python/warpalign/mapping.py` invokes minimap2 with an argument list, requests `-c -x PRESET` PAF, checks its status and spools candidate output locally. Minimap2 still performs candidate discovery and its own base alignment; WarpAlign then refines the fixed intervals. Measure this extra work at pipeline level rather than assuming a benefit.
 
-Refined results retain interval coordinates, orientation and MAPQ. The CIGAR is in target-forward orientation. Existing score/CIGAR tags are not reused; new cost and CIGAR tags come from WarpAlign. Unmapped reads produce no PAF row. Secondary candidates are refined too. No candidate padding or endpoint optimization is implemented.
+Reference and reads are indexed in temporary SQLite files. Interval queries use SQLite substring access, avoiding full-reference dictionaries during refinement. Building the index still materializes one input record at a time, so an individual chromosome can require a substantial transient buffer. Native FASTA offset indexes are a future optimization.
 
-The adapter has unit tests for asymmetric reverse-complement inputs and coordinate preservation. Actual minimap2 pipeline execution requires the external executable and remains a separate integration check. Entire references and reads are loaded into dictionaries; indexed reference access is a roadmap item.
+Negative-strand query intervals are reverse-complemented against forward target slices. Original forward query coordinates, target coordinates and mapper MAPQ are preserved; MAPQ is not recalibrated. Outputs include mapper version/argv. Secondary candidates are retained; unmapped reads produce no PAF row. Endpoint extension/optimization and splice-aware refinement are not implemented.
+
+Tests cover asymmetric reverse-complement intervals, coordinates and disk-index access. Actual minimap2 execution and real sequencing workloads remain external validation requirements.

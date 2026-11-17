@@ -1,51 +1,81 @@
-# Development and acceptance report
+# 0.2.0 development report
 
-Date: 2026-11-16. This is a functional CPU vertical slice, not completion of the full requested CUDA ecosystem.
+Updated 2026-11-17. Work is left uncommitted. This report describes implemented behavior and executed checks, not completion of the entire GPU research roadmap.
 
-## Files and architecture
+## Implemented
 
-- `include/warpalign/`: C++17 configuration/results, DNA handling, affine M/I/D WFA, CIGAR traceback, score-only history and experimental CUDA score/arena headers.
-- `CMakeLists.txt`, `examples/basic.cpp`: dependency-free CPU build, CTest, installable CMake/header package; opt-in CUDA test target.
-- `python/bindings.cpp`, `python/warpalign/`: pybind11 wrapper, typed package, streaming FASTA/FASTQ CLI, PAF/JSONL output, minimap2 adapter, FastAPI jobs and measurement engine.
-- `apps/studio/`: six-screen React/TypeScript local application, result table, CIGAR-indexed canvas and measurement SVGs.
-- `tests/`: independent affine DP/CIGAR validation, Python/CLI/API integration, CUDA device tests and synthetic fixtures.
-- `benchmarks/`: seeded CPU runner, provenance, real raw CSV/JSON and SVG output.
-- `docs/`, `mkdocs.yml`: technical and user documentation, local static-site configuration, prior-art/license audit and limitations.
-- Root governance files and `.github/`: MIT licence, contribution/security/conduct/citation/versioning files, issue/PR templates, CPU/Python/frontend/docs CI and manual GPU runner workflow.
+| Area | Change |
+|---|---|
+| CPU WFA | Indexed history, exact penalty normalization, checkpoint/recompute traceback, CPU deadlines, explicit adaptive heuristic retries |
+| Python/CLI | Batch threads with shared wavefront budget, strict CUDA requests, doctor/version commands, ID pairing, richer provenance and timing scope |
+| CUDA source | Resource-sized batches, independent warp blocks, reusable arena limits, optional pybind11 module, opt-in dispatch and GPU/CPU score agreement |
+| Mapping | Disk-backed sequence indexing and interval fetch, mapper version/command metadata |
+| Studio service | SQLite persistence, process-isolated cancellation/deadlines, restart interruption states, global result search/sort, metadata/detail separation, streamed JSONL/PAF |
+| Studio UI | Redesigned responsive light/dark workbench, real demo action, drag/drop, resource controls, indexed viewer, variant navigation, zoom/text accessibility, measured comparison plots |
+| Packaging | Portable npm lockfile; Studio bundled into built wheels; dependency notices; tested installation outside checkout |
+| Validation tooling | Expanded unit/integration tests, real-device test script, actual-browser E2E script, compiler/Python matrices and manual external-comparison workflow |
+| Reproducibility | Indel generator, independent small-case DP reference, isolated RSS, checkpoint comparison records, source hashes, baseline protocol/WFA2 adapter source |
+| Examples | Nextflow, Snakemake, Colab validation notebook and source-archive helper |
 
-## Executed successfully
+## Executed evidence
 
-- GCC 13.3.0 C++17 compile; CMake 4.4.4 build; CTest 1/1; installed CMake package consumed successfully by a separate project.
-- 4,000 seeded WFA vs independent affine-DP comparisons with CIGAR replay/rescoring and score-only equivalence.
-- Edge cases, N policies, lowercase, gaps, resource rejection and low-divergence sequence lengths 100, 500, 1k, 5k, 10k, 20k, 50k and 100k. Empty-target 100k path has a direct exact single-gap calculation.
-- AddressSanitizer/UndefinedBehaviorSanitizer CPU run (leak detection disabled for sandbox compatibility).
-- Python extension compiled manually from existing pybind11 headers; 12 pytest checks pass, including real in-process ASGI upload, alignment, download and measurement. No mock alignment responses.
-- TypeScript and Vite production build; two frontend CIGAR viewport tests pass.
-- 16 recorded CPU benchmark configurations: eight lengths × traceback/score-only, one pair per batch, three repeats after a warm-up, substitution probability 0.001. See raw files for exact timings and hardware.
+- CMake/CTest CPU build: 1/1 CTest target passing.
+- Independent oracle: 4,000 randomized and 1,922 exhaustive short-pair comparisons; CIGAR replay/rescoring, full/checkpoint/score-only agreement and low-divergence lengths through 100 kb.
+- Python/API suite: 26 passed, 2 skipped (CUDA extension/device and actual minimap2 unavailable). Includes real worker subprocesses, durable search/detail/export, cancellation, deadlines, indexed refinement and memory-budget tests.
+- CPU AddressSanitizer/UndefinedBehaviorSanitizer run passed with leak detection disabled for sandbox compatibility.
+- Frontend TypeScript/Vite build and five CIGAR-index tests passed.
+- Clean isolated frontend `npm ci --offline` from cached registry packages, followed by build/tests, passed with a portable integrity lockfile. The final expanded source also builds with the installed dependencies.
+- Native wheel built using available SDK headers, installed with no dependencies into a fresh virtualenv, and checked from outside the checkout. Native alignment, packaged Studio discovery and installed `warpalign doctor` passed.
+- Recorded 0.2.0 CPU/indel and checkpoint and 20/50/100 kb low-divergence experiments include actual repeats, wavefront storage and isolated process RSS. Checkpointing lowers accounted wavefront storage on larger recorded cases while increasing runtime.
+- Documentation navigation and local links passed static validation.
 
-## Not validated / remaining work
+## Explicitly outstanding
 
-- No NVCC, driver tool or GPU available. CUDA source has not compiled or executed. The prototype has score-only output, sequential calls and no GPU traceback or adaptive batch scheduler. Production CUDA requests explicitly fall back to CPU.
-- No external minimap2, WFA2, WFA-GPU or GASAL2 binary available. Reverse-strand adapter logic is unit tested; real mapper execution and external comparative benchmarks remain unrun.
-- No live browser/network test: sandbox denies binding 127.0.0.1:8000. In-process API checks passed; this is not a browser end-to-end pass.
-- Documentation navigation and local Markdown links passed static validation. MkDocs is unavailable and package downloads fail DNS resolution. Documentation source and navigation exist; the MkDocs build is unrun.
-- Clean wheel/editable install and clean npm installation remain unverified. Validation reused existing local Python packages and frontend dependencies. Generated extensions/bundles, virtualenv and local symlinks are ignored.
-- No adaptive heuristic expansion, BiWFA/checkpointed traceback, parallel CPU batching, production GPU dispatch, real-data ultra-long validation, complete indel benchmark sweep, peak RSS measurement or measured external improvement.
-- No public repository/publishing setup. Protected `.git` is not a usable repository; no commits were made.
+- CUDA compilation, GPU runtime equivalence and device sanitizers: no NVCC/validated device environment available. CUDA source is experimental.
+- Native GPU traceback source is implemented with host-tested shared logic, but remains uncompiled and unexecuted on a device. Multi-warp scheduling and asynchronous transfers remain unimplemented.
+- WFA2 adapter compilation/execution, WFA-GPU/GASAL2 adapters and external performance comparisons: unvalidated or unsupplied. No external speedup/novelty claim.
+- Real minimap2 workloads and public sequencing datasets: not run locally. The real mapper test is skipped when the executable is absent.
+- Live browser E2E: sandbox denies loopback binding; the available browser also lacks libasound. Browser script/CI are provided but are not passing execution evidence.
+- MkDocs build: package downloads are unavailable and MkDocs is not installed. Source/link validation is not a full docs build.
+- CUDA/Nextflow/Snakemake/Colab workflows and newly defined GitHub Actions require execution in their intended environments.
 
-## Current-workspace commands
+## Run this workspace
 
 ```sh
-# Python extension has been built locally; .venv has validation-only paths.
+.venv/bin/python -m warpalign.cli doctor
 .venv/bin/python -m warpalign.cli align-pairs \
   --queries tests/fixtures/queries.fa --targets tests/fixtures/targets.fa \
-  --backend auto --output /tmp/warpalign-results.paf
+  --threads 2 --checkpoint-interval 128 --output /tmp/warpalign-results.paf
+WARPALIGN_DATA_DIR="$PWD/.local-data" .venv/bin/python -m warpalign.api --port 8000
+# Open http://localhost:8000 from a terminal with permitted loopback binding.
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -q
 /home/satvik/CN_project/build-tools/cmake/data/bin/ctest --test-dir build/cmake --output-on-failure
-(cd apps/studio && npm run build && npm test)
-.venv/bin/python benchmarks/scripts/run.py --batches 1 --repeats 3 --error-rate 0.001
-.venv/bin/python -m warpalign.api
-# Studio URL when local binding is permitted: http://127.0.0.1:8000
+(cd apps/studio && npm ci && npm run build && npm test)
 ```
 
-For a clean machine, use [installation](installation.md). After installing the docs extra, build with `python -m mkdocs build --strict`. The package installs `warpalign` and `warpalign-studio` entry points. There is no claim that unavailable checks passed.
+On a clean network-enabled machine follow [installation](installation.md). Build the public docs using `python -m mkdocs build --strict` after installing the docs extra. [Workflow examples](workflows.md) explain using Colab with uncommitted source. Nothing in this development pass has been staged, committed or pushed.
+
+## Follow-up validation pass
+
+The CUDA full-result path now implements device traceback (extension API 2).
+Its shared host/device routine passes the same 5,922 short-case CIGAR checks as
+the CPU engine, plus AddressSanitizer/UndefinedBehaviorSanitizer checks on the
+host. This is algorithm evidence, not GPU execution evidence.
+
+`python scripts/validate_release.py` writes individual logs and a JSON report,
+returning exit 2 for blocked prerequisites and exit 1 for failures. The local
+report in `benchmarks/results/release-validation/report.json` records four
+blocked checks: CUDA tools/device, MkDocs, installed browser dependencies, and
+a built WFA2 checkout. DNS resolution and localhost socket creation are also
+unavailable in this sandbox. No external benchmark or browser pass is claimed.
+
+On a network-enabled machine, install the documented dependencies and run:
+
+```sh
+python scripts/validate_release.py --checks docs,browser
+python scripts/validate_release.py --checks cuda
+python scripts/validate_release.py --checks external --wfa2-root /path/to/WFA2-lib
+```
+
+The external runner compiles the adapter and measures both high-memory WFA2
+and ultralow-memory BiWFA using a recorded clean source revision.

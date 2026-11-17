@@ -1,0 +1,2 @@
+queries: tests/fixtures/queries.fa
+targets: tests/fixtures/targets.fa

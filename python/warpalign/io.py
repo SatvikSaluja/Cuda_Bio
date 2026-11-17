@@ -47,7 +47,10 @@ def parse_records(lines):
             if quality_length != len(sequence):
                 raise ValueError('FASTQ quality length differs from sequence')
             yield name, sequence
-            header = next(it, '').strip()
+            next_header=next(it,None)
+            if next_header is None:return
+            header=next_header.strip()
+            if not header:raise ValueError('Blank FASTQ header between records')
     else:
         raise ValueError('Expected FASTA (>) or FASTQ (@)')
 
@@ -76,3 +79,27 @@ def paf(row):
     tags = [f"wc:i:{row['score']}", f"NM:i:{row['edit_distance']}", f"cg:Z:{row['cigar']}",
             f"wb:Z:{row['backend']}", f"wh:i:{int(row['heuristic_used'])}"]
     return '\t'.join(map(str, fields + tags))
+
+class SequenceIndex:
+    """Temporary disk-backed sequence index; fetch intervals without loading chromosomes."""
+    def __init__(self, path):
+        import sqlite3
+        self.db=sqlite3.connect(path)
+        self.db.execute('CREATE TABLE sequences(id TEXT PRIMARY KEY,sequence TEXT NOT NULL,length INTEGER NOT NULL)')
+    def load(self,path):
+        import sqlite3
+        try:
+            with self.db:
+                for name,sequence in records(path):
+                    self.db.execute('INSERT INTO sequences VALUES(?,?,?)',(name,sequence,len(sequence)))
+        except sqlite3.IntegrityError as error:
+            raise ValueError('Duplicate sequence identifier') from error
+    def length(self,name):
+        row=self.db.execute('SELECT length FROM sequences WHERE id=?',(name,)).fetchone()
+        if row is None:raise ValueError(f'Unknown sequence identifier: {name}')
+        return row[0]
+    def fetch(self,name,start,end):
+        row=self.db.execute('SELECT substr(sequence,?,?) FROM sequences WHERE id=?',(start+1,end-start,name)).fetchone()
+        if row is None:raise ValueError(f'Unknown sequence identifier: {name}')
+        return row[0]
+    def close(self):self.db.close()

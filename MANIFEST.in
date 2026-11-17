@@ -1,2 +1,9 @@
 recursive-include include *.hpp *.cuh
 include python/bindings.cpp
+include python/cuda_bindings.cu
+recursive-include apps/studio/dist *
+include CMakeLists.txt
+recursive-include examples *.cpp
+recursive-include tests *.py *.cpp *.cu *.fa
+recursive-include python/warpalign/licenses *.txt
+include THIRD_PARTY_NOTICES.md

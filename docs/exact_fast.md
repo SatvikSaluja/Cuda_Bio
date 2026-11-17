@@ -1,7 +1,15 @@
 # Exact and fast modes
 
-Exact mode explores all score-reachable diagonals within the input rectangle. The terminal state at the first reachable cost has the optimum under the configured model. Resource exhaustion raises an exception, never a heuristic substitute.
+Exact WFA explores all score-reachable diagonals within the sequence rectangle. Checkpointing and penalty normalization preserve its recurrence and optimum. Resource exhaustion raises an error; it never changes exact mode to heuristic mode.
 
-Fast mode uses a fixed symmetric band. A successful result may exclude a cheaper path and is always marked heuristic, with bandwidth recorded. Widening a band and observing an unchanged score alone is not a proof of exactness. A future exact retry implementation must use a lower-bound certificate or expand to all reachable diagonals.
+Fast mode restricts diagonals to ±bandwidth. Every successful result remains marked heuristic. With `adaptive_band=True`, an unreachable alignment causes the bandwidth to double until success or `max_bandwidth` is reached. The returned bandwidth and `heuristic_retries` describe the actual execution. Memory exhaustion is not treated as a reason to expand the band.
 
-Studio's agreement chart compares measured heuristic scores against CPU exact scores on identical generated pairs. That empirical agreement is not a guarantee on other inputs.
+```python
+from warpalign import Aligner
+r = Aligner(mode="fast", bandwidth=8, adaptive_band=True,
+            max_bandwidth=256).align("A"*100, "A"*80)
+assert r.heuristic_used
+print(r.bandwidth, r.heuristic_retries)
+```
+
+A successful narrow-band result can still be suboptimal; automatic retry is not an exactness certificate. An unchanged score after expansion is also insufficient proof. Studio's measured agreement is empirical and reports its reference source.

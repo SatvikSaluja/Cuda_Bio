@@ -1,0 +1,14 @@
+# snakemake --snakefile examples/pipelines/Snakefile --cores 4
+configfile: "examples/pipelines/config.yaml"
+rule all:
+    input: "results/pairs.paf"
+rule align_pairs:
+    input:
+        queries=config["queries"],
+        targets=config["targets"]
+    output: "results/pairs.paf"
+    threads: 4
+    resources: mem_mb=1024
+    shell:
+        "warpalign align-pairs --queries {input.queries:q} --targets {input.targets:q} "
+        "--backend cpu --threads {threads} --memory-mb {resources.mem_mb} --output {output:q}"

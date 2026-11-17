@@ -8,6 +8,9 @@ import statistics
 import subprocess
 import sys
 import time
+import hashlib
+from .reference import affine_score
+from .diagnostics import capabilities
 from pathlib import Path
 from . import Aligner, __version__
 
@@ -25,32 +28,49 @@ def hardware():
     except OSError:
         compiler='unavailable'
     return dict(cpu=cpu,platform=platform.platform(),python=sys.version,compiler=compiler,
-                gpu=None,cuda=None,warpalign=__version__)
+                gpu=capabilities()["gpu"],cuda=capabilities()["cuda_version"],warpalign=__version__)
 
-def measure(length=1000,batch_size=4,mode='exact',bandwidth=64,backend='cpu',repeats=3,error_rate=.01,seed=1729,score_only=False):
-    rng=random.Random(seed)
-    pairs=[]
+def generate_pairs(length,batch_size,error_rate,indel_rate,seed):
+    rng=random.Random(seed);pairs=[]
     for _ in range(batch_size):
-        q=''.join(rng.choice('ACGT') for _ in range(length));t=''.join(rng.choice('ACGT'.replace(b,'')) if rng.random()<error_rate else b for b in q);pairs.append((q,t))
-    a=Aligner(backend=backend,mode=mode,bandwidth=bandwidth,score_only=score_only)
-    gold=[Aligner(score_only=True).align(q,t).score for q,t in pairs]
-    a.align(*pairs[0]) # unmeasured warm-up
+        q=''.join(rng.choice('ACGT') for _ in range(length));t=[]
+        for base in q:
+            if rng.random()<indel_rate/2:t.append(rng.choice('ACGT'))
+            if rng.random()<indel_rate/2:continue
+            t.append(rng.choice('ACGT'.replace(base,'')) if rng.random()<error_rate else base)
+        pairs.append((q,''.join(t)))
+    return pairs
+
+def measure(length=1000,batch_size=4,mode='exact',bandwidth=64,backend='cpu',repeats=3,error_rate=.01,
+            seed=1729,score_only=False,indel_rate=0,timeout_seconds=30,threads=1,checkpoint_interval=0,allow_fallback=True):
+    if length<1 or batch_size<1 or repeats<1 or not 0<=error_rate<=1 or not 0<=indel_rate<=1:
+        raise ValueError('Invalid benchmark dimensions or error rates')
+    pairs=generate_pairs(length,batch_size,error_rate,indel_rate,seed)
+    queries,targets=map(list,zip(*pairs))
+    a=Aligner(backend=backend,mode=mode,bandwidth=bandwidth,score_only=score_only,timeout_seconds=timeout_seconds,threads=threads,checkpoint_interval=checkpoint_interval,allow_fallback=allow_fallback)
+    gold=[affine_score(q,t) if len(q)*len(t)<=100000 else Aligner(score_only=True,timeout_seconds=timeout_seconds).align(q,t).score for q,t in pairs]
+    a.align_batch(queries,targets) # warm up the same batch shape
     times=[];rows=[]
     for _ in range(repeats):
-        start=time.perf_counter();rows=[a.align(q,t) for q,t in pairs];times.append(time.perf_counter()-start)
+        start=time.perf_counter();rows=a.align_batch(queries,targets);times.append(time.perf_counter()-start)
     median=statistics.median(times)
-    return dict(length=length,batch_size=batch_size,mode=mode,bandwidth=bandwidth,requested_backend=backend,
-                backend='cpu',score_only=score_only,repeats=repeats,seed=seed,error_rate=error_rate,
+    return dict(length=length,target_lengths=[len(t) for t in targets],batch_size=batch_size,mode=mode,bandwidth=bandwidth,requested_backend=backend,
+                backend='+'.join(sorted({r.backend for r in rows})),score_only=score_only,threads=threads,checkpoint_interval=checkpoint_interval,repeats=repeats,seed=seed,error_rate=error_rate,indel_rate=indel_rate,
                 mismatch=4,gap_open=6,gap_extend=2,seconds=median,min_seconds=min(times),max_seconds=max(times),
-                raw_seconds=times,alignments_per_second=batch_size/median,bases_per_second=length*batch_size*2/median,
-                gpu_memory_bytes=None,wavefront_bytes=max(r.wavefront_bytes for r in rows),
+                stdev_seconds=statistics.stdev(times) if len(times)>1 else 0,raw_seconds=times,
+                alignments_per_second=batch_size/median,bases_per_second=sum(len(q)+len(t) for q,t in pairs)/median,
+                gpu_memory_bytes=max((r.gpu_memory_bytes for r in rows if r.backend!='cpu'),default=None),wavefront_bytes=max(r.wavefront_bytes for r in rows),
                 cpu_fallback_fraction=sum(r.cpu_fallback for r in rows)/batch_size,
                 score_agreement=sum(r.score==s for r,s in zip(rows,gold))/batch_size,scores=[r.score for r in rows],
-                speedup=None)
+                reference='independent affine DP' if all(len(q)*len(t)<=100000 for q,t in pairs) else 'CPU exact WFA (not independent)',
+                dataset_sha256=hashlib.sha256(json.dumps(pairs).encode()).hexdigest(),speedup=None)
 
 def save_report(rows,directory):
     directory=Path(directory);directory.mkdir(parents=True,exist_ok=True)
-    payload=dict(hardware=hardware(),command=sys.argv,provenance='Synthetic substitution-only DNA generated with Python random; seed in each row; original generated data, CC0',measurements=rows)
+    source_root=Path(__file__).resolve().parents[2]
+    sources=list((source_root/'include/warpalign').glob('*.hpp'))+[Path(__file__)]
+    hashes={str(p.relative_to(source_root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sources if p.is_file()}
+    payload=dict(hardware=hardware(),source_sha256=hashes,command=sys.argv,provenance='Synthetic substitution/indel DNA generated with Python random; seed in each row; original generated data, CC0',measurements=rows)
     (directory/'raw.json').write_text(json.dumps(payload,indent=2))
     with (directory/'raw.csv').open('w') as out:
         writer=csv.DictWriter(out,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
